@@ -1,112 +1,66 @@
-import torch
-from transformers import MarianMTModel, MarianTokenizer
-from langdetect import detect
-from googletrans import Translator
-from collections import defaultdict
+from flask import Flask, render_template, request, jsonify
+import pyttsx3
+from deep_translator import GoogleTranslator
+import uuid
 
-# Initialize translation models and tools
-class ComplexTranslator:
-    def __init__(self):
-        # Load MarianMT model (example for English-French translation)
-        self.language_pairs = {
-            ('en', 'fr'): "Helsinki-NLP/opus-mt-en-fr",
-            ('fr', 'en'): "Helsinki-NLP/opus-mt-fr-en",
-            ('en', 'de'): "Helsinki-NLP/opus-mt-en-de",
-            ('de', 'en'): "Helsinki-NLP/opus-mt-de-en",
-            # Add more language pairs as required
-        }
-        self.models = {}
-        self.tokenizers = {}
-        self.translator = Translator()
+# Initialize the Flask app
+app = Flask(__name__)
 
-        # Load models
-        for (src, tgt), model_name in self.language_pairs.items():
-            self.models[(src, tgt)] = MarianMTModel.from_pretrained(model_name)
-            self.tokenizers[(src, tgt)] = MarianTokenizer.from_pretrained(model_name)
+# Initialize the TTS engine
+engine = pyttsx3.init()
 
-    # Detect source language
-    def detect_language(self, text):
-        return detect(text)
+# Function to translate text using Google Translator
+def translate_text(text, target_language):
+    translated = GoogleTranslator(source='auto', target=target_language).translate(text)
+    return translated
 
-    # Translate function: context-aware and with formality options
-    def translate(self, text, target_lang, formality_level='default', source_lang=None):
-        if not source_lang:
-            source_lang = self.detect_language(text)
-        
-        # Handle formal/informal adjustment in translation
-        if formality_level == 'formal':
-            # Example: Adjust text before passing it to model (could involve rephrasing or prepending polite expressions)
-            text = "Could you please " + text
-        elif formality_level == 'informal':
-            # Example: Adjust text before passing it to model
-            text = "Hey, " + text
-        
-        # Use neural machine translation model for translating
-        model_key = (source_lang, target_lang)
-        if model_key not in self.models:
-            raise ValueError(f"Translation model for {source_lang} to {target_lang} not supported.")
-        
-        model = self.models[model_key]
-        tokenizer = self.tokenizers[model_key]
-        
-        inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
-        translated = model.generate(**inputs)
-        translated_text = tokenizer.decode(translated[0], skip_special_tokens=True)
+# Function to convert text to speech using pyttsx3
+def text_to_speech(text, language_code):
+    voices = engine.getProperty('voices')
+    
+    # Try to find a matching voice for the given language code
+    selected_voice = None
+    for voice in voices:
+        if language_code.lower() in voice.languages:
+            selected_voice = voice
+            break
+    
+    # If no matching voice is found, fall back to the first available voice
+    if not selected_voice:
+        selected_voice = voices[0]
+    
+    # Set the selected voice
+    engine.setProperty('voice', selected_voice.id)
+    engine.setProperty('rate', 150)  # Optional: adjust speaking rate
+    engine.setProperty('volume', 1)  # Optional: set the volume
 
-        return translated_text
+    print(f"Using voice: {selected_voice.name} for language {language_code}")
+    
+    # Make the engine speak the text
+    engine.say(text)
+    engine.runAndWait()
 
-    # Multi-language support with automatic detection
-    def multi_translate(self, text, target_languages):
-        translations = {}
-        for lang in target_languages:
-            translations[lang] = self.translate(text, lang)
-        return translations
+@app.route('/')
+def home():
+    return render_template('index.html')
 
-    # Contextual translation with embedded memory
-    def context_aware_translation(self, text, target_lang, memory=None):
-        """
-        Translate while considering memory or context, to adapt based on previous translations.
-        Example: A conversation context or prior translations can influence how the translation is handled.
-        """
-        # Build context from memory or previous translations if available
-        if memory:
-            context = "Previous conversation: " + " ".join(memory)
-            text = context + " " + text
-        
-        return self.translate(text, target_lang)
+@app.route('/text-to-speech', methods=['POST'])
+def handle_text_to_speech():
+    try:
+        # Get input text and target language from the request
+        data = request.get_json()
+        text = data['text']
+        target_language = data.get('language', 'en')
 
-    # Adjust for cultural sensitivity (very basic version, could be much more advanced)
-    def culturally_sensitive_translation(self, text, target_lang):
-        """
-        Modify the translation based on cultural considerations. This is a simple placeholder.
-        Actual implementation would involve a more complex cultural context map.
-        """
-        # Example: If translating to Japanese, adjust for more polite phrasing
-        if target_lang == 'ja':
-            text = "お世話になっております。" + text  # Adding a respectful greeting
-        return self.translate(text, target_lang)
+        # Translate the text if needed
+        translated_text = translate_text(text, target_language)
 
+        # Convert translated text to speech
+        text_to_speech(translated_text, target_language)
 
-# Example Usage:
-translator = ComplexTranslator()
+        return jsonify({'message': 'Text-to-Speech processing complete.'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
-# Basic Translation
-text = "How are you?"
-print("English to French:", translator.translate(text, 'fr'))
-
-# Formal Translation
-print("English to French (Formal):", translator.translate(text, 'fr', formality_level='formal'))
-
-# Multi-language Translation
-languages = ['fr', 'de', 'es']
-multi_translations = translator.multi_translate(text, languages)
-for lang, translated_text in multi_translations.items():
-    print(f"English to {lang.upper()}: {translated_text}")
-
-# Context-Aware Translation
-previous_conversation = ["How are you?", "I am fine."]
-context_text = "What is the weather like today?"
-print("Context-Aware Translation (English to French):", translator.context_aware_translation(context_text, 'fr', memory=previous_conversation))
-
-# Culturally Sensitive Translation (for Japanese)
-print("English to Japanese (Cultural Adjustment):", translator.culturally_sensitive_translation(text, 'ja'))
+if __name__ == '__main__':
+    app.run(debug=True)
