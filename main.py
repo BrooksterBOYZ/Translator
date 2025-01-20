@@ -11,8 +11,12 @@ engine = pyttsx3.init()
 
 # Function to translate text using Google Translator
 def translate_text(text, target_language):
-    translated = GoogleTranslator(source='auto', target=target_language).translate(text)
-    return translated
+    try:
+        # Translate using Google Translator
+        translated = GoogleTranslator(source='auto', target=target_language).translate(text)
+        return translated
+    except Exception as e:
+        return str(e)
 
 # Function to convert text to speech using pyttsx3
 def text_to_speech(text, language_code):
@@ -21,6 +25,7 @@ def text_to_speech(text, language_code):
     # Try to find a matching voice for the given language code
     selected_voice = None
     for voice in voices:
+        # Check for languages in the voice and match with target language code
         if language_code.lower() in voice.languages:
             selected_voice = voice
             break
@@ -50,10 +55,13 @@ def handle_text_to_speech():
         # Get input text and target language from the request
         data = request.get_json()
         text = data['text']
-        target_language = data.get('language', 'en')
+        target_language = data.get('language', 'en')  # Default to English if no language provided
 
-        # Translate the text if needed
+        # Translate the text to the target language
         translated_text = translate_text(text, target_language)
+
+        if "error" in translated_text.lower():
+            return jsonify({'error': f"Translation failed: {translated_text}"}), 400
 
         # Convert translated text to speech
         text_to_speech(translated_text, target_language)
