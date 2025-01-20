@@ -104,19 +104,43 @@
         // Load voices when the page is ready
         window.speechSynthesis.onvoiceschanged = function () {
             voices = window.speechSynthesis.getVoices();
+            const languageSelect = document.getElementById('language');
             const voiceSelect = document.getElementById('voice');
-            voiceSelect.innerHTML = '';  // Clear existing options
+            
+            // Function to filter voices based on the selected language
+            function filterVoicesByLanguage(lang) {
+                return voices.filter(voice => voice.lang.startsWith(lang));
+            }
 
-            voices.forEach(voice => {
-                const option = document.createElement('option');
-                option.value = voice.name;
-                option.textContent = voice.name + ' (' + voice.lang + ')';
-                voiceSelect.appendChild(option);
+            // Set up the voices dropdown dynamically based on the language selection
+            function updateVoiceDropdown(languageCode) {
+                const filteredVoices = filterVoicesByLanguage(languageCode);
+                voiceSelect.innerHTML = ''; // Clear existing voices
+
+                filteredVoices.forEach(voice => {
+                    const option = document.createElement('option');
+                    option.value = voice.name;
+                    option.textContent = voice.name + ' (' + voice.lang + ')';
+                    voiceSelect.appendChild(option);
+                });
+
+                // Default selection (first available voice)
+                if (filteredVoices.length > 0) {
+                    selectedVoice = filteredVoices[0];
+                    voiceSelect.value = selectedVoice.name;
+                } else {
+                    selectedVoice = null;
+                    voiceSelect.innerHTML = '<option>No voice available for selected language</option>';
+                }
+            }
+
+            // Initial load with default language (English-US)
+            updateVoiceDropdown(languageSelect.value);
+
+            // Update voice list when the user changes the language
+            languageSelect.addEventListener('change', (e) => {
+                updateVoiceDropdown(e.target.value);
             });
-
-            // Set default voice to the first available voice
-            selectedVoice = voices[0];
-            voiceSelect.value = selectedVoice.name;
         };
 
         // Function to handle Text-to-Speech conversion
@@ -174,3 +198,4 @@
 </body>
 
 </html>
+
