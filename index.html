@@ -7,42 +7,49 @@
 </head>
 <body>
     <h1>Text-to-Speech App</h1>
-    <form id="tts-form">
-        <textarea id="text" placeholder="Enter text here..."></textarea><br>
-        <select id="language">
-            <option value="en">English</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <!-- Add more languages here -->
-        </select><br>
-        <button type="submit">Convert to Speech</button>
-    </form>
+
+    <textarea id="text" placeholder="Enter text here..." rows="5" cols="40"></textarea><br>
+
+    <label for="language">Choose language:</label>
+    <select id="language">
+        <option value="en-US">English (US)</option>
+        <option value="en-GB">English (UK)</option>
+        <option value="es-ES">Spanish (Spain)</option>
+        <option value="fr-FR">French (France)</option>
+        <!-- You can add more languages here -->
+    </select><br>
+
+    <button onclick="convertTextToSpeech()">Convert to Speech</button>
 
     <div id="response-message"></div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        // Handle form submission
-        $('#tts-form').on('submit', function(e) {
-            e.preventDefault();  // Prevent the form from submitting normally
+        function convertTextToSpeech() {
+            const text = document.getElementById("text").value;
+            const language = document.getElementById("language").value;
+            
+            // Check if there's any text entered
+            if (text.trim() === "") {
+                alert("Please enter some text!");
+                return;
+            }
 
-            const text = $('#text').val();
-            const language = $('#language').val();
+            // Create a new SpeechSynthesisUtterance object for TTS
+            const utterance = new SpeechSynthesisUtterance(text);
 
-            // Make AJAX call to Flask backend
-            $.ajax({
-                url: 'http://127.0.0.1:5000/text-to-speech',  // Local Flask server URL
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ text: text, language: language }),
-                success: function(response) {
-                    $('#response-message').html('<p>Text-to-Speech processing complete!</p>');
-                },
-                error: function(xhr, status, error) {
-                    $('#response-message').html('<p style="color: red;">Error: ' + xhr.responseJSON.error + '</p>');
-                }
-            });
-        });
+            // Set the language of the speech
+            utterance.lang = language;
+
+            // Optionally adjust the pitch and rate of the speech
+            utterance.pitch = 1;  // Default pitch
+            utterance.rate = 1;   // Default rate of speech
+
+            // Speak the text
+            window.speechSynthesis.speak(utterance);
+
+            // Show a message that TTS is processing
+            document.getElementById("response-message").innerHTML = "<p>Text-to-Speech processing complete!</p>";
+        }
     </script>
 </body>
 </html>
