@@ -7,6 +7,11 @@ $.ajax({
         $('#response-message').html('<p>Text-to-Speech processing complete!</p>');
     },
     error: function(xhr, status, error) {
-        $('#response-message').html('<p style="color: red;">Error: ' + xhr.responseJSON.error + '</p>');
+        // Safely access response JSON and show the error message
+        let errorMessage = 'An unexpected error occurred.';
+        if (xhr.responseJSON && xhr.responseJSON.error) {
+            errorMessage = xhr.responseJSON.error;
+        }
+        $('#response-message').html('<p style="color: red;">Error: ' + errorMessage + '</p>');
     }
 });
