@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text-to-Speech with Flask</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        input, textarea, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Text-to-Speech Converter</h1>
+    <form id="tts-form">
+        <label for="text">Enter Text:</label>
+        <textarea id="text" rows="4" required></textarea>
+
+        <label for="language">Select Language:</label>
+        <select id="language" required>
+            <option value="en">English</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="it">Italian</option>
+        </select>
+
+        <button type="submit">Convert to Speech</button>
+    </form>
+    <div id="response-message"></div>
+</div>
+
+<script>
+    // Handle form submission
+    $('#tts-form').on('submit', function(e) {
+        e.preventDefault();  // Prevent default form submission
+
+        const text = $('#text').val();
+        const language = $('#language').val();
+
+        // Send the request to the Flask server
+        $.ajax({
+            url: '/text-to-speech',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ text: text, language: language }),
+            success: function(response) {
+                $('#response-message').html('<p>Text-to-Speech conversion complete!</p>');
+            },
+            error: function(xhr, status, error) {
+                $('#response-message').html('<p style="color: red;">Error: ' + xhr.responseJSON.error + '</p>');
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
