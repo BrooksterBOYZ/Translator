@@ -1,10 +1,12 @@
 from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
 import pyttsx3
 from deep_translator import GoogleTranslator
 import uuid
 
 # Initialize the Flask app
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # Initialize the TTS engine
 engine = pyttsx3.init()
@@ -25,7 +27,6 @@ def text_to_speech(text, language_code):
     # Try to find a matching voice for the given language code
     selected_voice = None
     for voice in voices:
-        # Check for languages in the voice and match with target language code
         if language_code.lower() in voice.languages:
             selected_voice = voice
             break
